@@ -48,7 +48,7 @@
 
       <div class="admin-note">โหมดผู้ดูแลระบบ — สำหรับพนักงานที่ได้รับสิทธิ์เท่านั้น</div>
 
-      <p class="login-foot" id="login-foot">ยังไม่มีบัญชี? <a href="register.php" style="color: var(--pink-deep); font-weight:600; text-decoration:underline; cursor:pointer;">สมัครสมาชิก</a></p>
+      <p class="login-foot" id="login-foot">ยังไม่มีบัญชี? <a href="register.html" style="color: var(--pink-deep); font-weight:600; text-decoration:underline; cursor:pointer;">สมัครสมาชิก</a></p>
     </div>
   </div>
 </div>
@@ -83,13 +83,15 @@ async function doLogin() {
   errEl.classList.add("hidden");
 
   if (mode === "admin") {
-    const res = await apiPost("/auth/admin_login.php", { username: identifier, password });
+    const res = await apiPost("/auth/admin_login", { username: identifier, password });
     if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
-    window.location.href = "admin-dashboard.php";
+    localStorage.setItem("token", res.token);
+    window.location.href = "admin-dashboard.html";
   } else {
-    const res = await apiPost("/auth/login.php", { identifier, password });
+    const res = await apiPost("/auth/login", { identifier, password });
     if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
-    window.location.href = "user-dashboard.php";
+    localStorage.setItem("token", res.token);
+    window.location.href = "user-dashboard.html";
   }
 }
 </script>

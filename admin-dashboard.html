@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetalLock — แผงควบคุมแอดมิน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar">
+      <div class="brand"><span class="brand-dot"></span> PetalLock <span style="font-size:10px; background:var(--lavender-pale); color:var(--lavender-deep); padding:2px 8px; border-radius:999px; margin-left:4px;">ADMIN</span></div>
+      <div class="nav-group-label">จัดการระบบ</div>
+      <button class="nav-item active" data-target="a-overview" onclick="switchAdminView(this)"><span class="ic">⌂</span> ภาพรวม</button>
+      <button class="nav-item" data-target="a-reports" onclick="switchAdminView(this)"><span class="ic">📊</span> รายงานรายได้</button>
+      <button class="nav-item" data-target="a-lockers" onclick="switchAdminView(this)"><span class="ic">▦</span> ตู้ทั้งหมด</button>
+      <button class="nav-item" data-target="a-slips" onclick="switchAdminView(this)"><span class="ic">🧾</span> คิวตรวจสอบสลิป <span class="nav-badge hidden" id="slip-badge">0</span></button>
+      <button class="nav-item" data-target="a-users" onclick="switchAdminView(this)"><span class="ic">☺</span> ผู้ใช้งาน</button>
+      <button class="nav-item" data-target="a-chat" onclick="switchAdminView(this)"><span class="ic">💬</span> แชทลูกค้า <span class="nav-badge hidden" id="chat-badge">0</span></button>
+      <button class="nav-item" data-target="a-settings" onclick="switchAdminView(this)"><span class="ic">⚙</span> ตั้งค่าระบบ</button>
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <div class="avatar">Ad</div>
+          <div>
+            <div class="name" id="admin-name-display"></div>
+            <div class="role">ผู้ดูแลระบบ</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div id="a-overview" class="admin-view">
+        <div class="topbar">
+          <div><h1>ภาพรวมระบบ</h1><div class="sub">สถานะตู้ล็อกเกอร์ทั้งหมดในระบบ ณ ตอนนี้</div></div>
+          <button class="btn-primary" style="width:auto; padding:11px 20px; background: linear-gradient(135deg, var(--red), #C7405A);" onclick="openEmergencyModal()">🚨 ปลดล็อกฉุกเฉิน</button>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card pink"><div class="label">ตู้ทั้งหมด</div><div class="value" id="stat-total">0</div></div>
+          <div class="stat-card lav"><div class="label">ว่าง</div><div class="value" id="stat-available">0</div></div>
+          <div class="stat-card pink"><div class="label">ไม่ว่าง</div><div class="value" id="stat-occupied">0</div></div>
+          <div class="stat-card lav"><div class="label">แจ้งเตือน / ประตูผิดปกติ</div><div class="value" id="stat-alert">0</div></div>
+        </div>
+        <div class="section-title">ผู้ใช้งานล่าสุด</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ผู้ใช้</th><th>ตู้</th><th>สถานะ</th><th>เวลา</th></tr></thead>
+            <tbody id="recent-activity"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="a-reports" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>รายงานรายได้</h1><div class="sub">สรุปรายได้จากการให้เช่าตู้ล็อกเกอร์</div></div></div>
+        <div class="stat-row">
+          <div class="stat-card pink"><div class="label">รายได้วันนี้</div><div class="value" id="stat-rev-today">0 บาท</div></div>
+          <div class="stat-card lav"><div class="label">รายได้ 7 วันล่าสุด</div><div class="value" id="stat-rev-week">0 บาท</div></div>
+          <div class="stat-card pink"><div class="label">จำนวนการเช่าทั้งหมด</div><div class="value" id="stat-rev-count">0</div></div>
+          <div class="stat-card lav"><div class="label">รายได้เฉลี่ย/ครั้ง</div><div class="value" id="stat-rev-avg">0 บาท</div></div>
+        </div>
+        <div class="section-title">แนวโน้มรายได้ 7 วันล่าสุด</div>
+        <div class="card" style="max-width:100%;">
+          <div id="revenue-chart" class="css-bar-chart"></div>
+        </div>
+      </div>
+
+      <div id="a-lockers" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>ตู้ทั้งหมด</h1><div class="sub">ตรวจสอบและจัดการสถานะตู้ล็อกเกอร์รายตัว</div></div></div>
+        <div class="filter-tabs" id="admin-filter-tabs"></div>
+        <div class="locker-grid" id="admin-locker-grid"></div>
+      </div>
+
+      <div id="a-slips" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>คิวตรวจสอบสลิป</h1><div class="sub">ตรวจสลิปที่ลูกค้าโอนเข้ามา แล้วกดยืนยันเพื่อปลดล็อกให้ลูกค้า</div></div></div>
+        <div id="pending-slip-list"></div>
+      </div>
+
+      <div id="a-users" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>ผู้ใช้งาน</h1><div class="sub">รายชื่อสมาชิกที่ลงทะเบียนในระบบ</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ชื่อ</th><th>เบอร์โทร</th><th>ตู้ที่เช่า</th><th>สถานะบัญชี</th></tr></thead>
+            <tbody id="user-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="a-chat" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>แชทลูกค้า</h1><div class="sub">เลือกลูกค้าที่ต้องการสนทนา</div></div></div>
+        <select id="chat-conversation-select" onchange="selectChatConversation()" style="width:100%; padding:11px 14px; border-radius:12px; border:1.5px solid var(--line); background:var(--surface-soft); font-size:13.5px; margin-bottom:14px;">
+          <option value="">— เลือกบทสนทนา —</option>
+        </select>
+        <div class="chat-window">
+          <div class="chat-messages" id="chat-messages-admin"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input-admin" placeholder="พิมพ์ข้อความตอบกลับลูกค้า..." onkeydown="if(event.key==='Enter') sendChatMessage('admin')">
+            <button class="chat-send-btn" onclick="sendChatMessage('admin')">➤</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="a-settings" class="admin-view" style="display:none;">
+        <div class="topbar"><div><h1>ตั้งค่าระบบ</h1><div class="sub">ปรับค่าพื้นฐานของระบบตู้ล็อกเกอร์</div></div></div>
+        <div class="card">
+          <h3>การตั้งค่าทั่วไป</h3>
+          <div class="field"><label>ชื่อสถานที่ติดตั้ง</label><input type="text" id="settings-location"></div>
+          <div class="field"><label>ระยะเวลาปลดล็อกอัตโนมัติ (วินาที)</label><input type="text" id="settings-unlock-hold"></div>
+          <div class="field"><label>แจ้งเตือนก่อนครบกำหนด (ชั่วโมง)</label><input type="text" id="settings-notify-hours"></div>
+          <div id="settings-error" class="form-error hidden">กรุณากรอกข้อมูลให้ถูกต้อง</div>
+          <div style="font-size:11.5px; color:var(--muted); margin:6px 0 14px;">หมายเหตุ: ค่าระยะเวลาปลดล็อกจะถูกบันทึกไว้ในระบบ แต่ตัว ESP32 ยังใช้ค่าคงที่ในเฟิร์มแวร์อยู่ — ต้องอัปเดตโค้ด ESP32 แยกต่างหากเพื่อให้ดึงค่านี้ไปใช้จริง</div>
+          <button class="btn-primary" onclick="saveSettings()">บันทึกการตั้งค่า</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="modal-overlay lightbox-overlay hidden" id="slip-lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img class="lightbox-img" id="lightbox-img" onclick="event.stopPropagation()">
+</div>
+
+<div class="modal-overlay hidden" id="reject-modal">
+  <div class="modal-box" style="max-width:400px;">
+    <button class="modal-close" onclick="closeRejectModal()">×</button>
+    <h3 style="margin-bottom:4px;">ปฏิเสธสลิป <span id="reject-modal-label"></span></h3>
+    <p class="login-sub" style="margin-bottom:18px;">ระบุเหตุผล เช่น สลิปปลอม ยอดเงินไม่ตรง หรือโอนผิดบัญชี ระบบจะแจ้งเหตุผลนี้ไปยังลูกค้า</p>
+    <div class="field">
+      <label>เหตุผลที่ปฏิเสธ</label>
+      <textarea id="reject-reason" placeholder="เช่น ยอดโอนไม่ตรงกับราคาตู้ที่เลือก (โอนมา 15 บาท ต้องชำระ 20 บาท)"></textarea>
+    </div>
+    <div id="reject-error" class="form-error hidden">กรุณาระบุเหตุผลก่อนปฏิเสธสลิป</div>
+    <button class="btn-primary" style="margin-top:14px; background: linear-gradient(135deg, var(--red), #C7405A);" onclick="submitReject()">ยืนยันการปฏิเสธสลิป</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="emergency-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeEmergencyModal()">×</button>
+    <h3 style="margin-bottom:4px;">ปลดล็อกฉุกเฉิน</h3>
+    <p class="login-sub" style="margin-bottom:16px;">ใช้เฉพาะกรณีฉุกเฉิน เช่น ระบบค้างหรือเหตุขัดข้องที่ต้องเข้าถึงตู้ทันที การกระทำนี้จะถูกบันทึกไว้ในระบบ</p>
+    <div id="emergency-locker-list"></div>
+    <div class="field" style="margin-top:14px;">
+      <label>เหตุผล</label>
+      <textarea id="emergency-reason" placeholder="ระบุเหตุผลของการปลดล็อกฉุกเฉิน"></textarea>
+    </div>
+    <div id="emergency-error" class="form-error hidden">กรุณาเลือกตู้อย่างน้อย 1 ตู้ และระบุเหตุผล</div>
+    <button class="btn-primary" style="margin-top:14px; background: linear-gradient(135deg, var(--red), #C7405A);" onclick="submitEmergencyUnlock()">ยืนยันปลดล็อกฉุกเฉิน</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="edit-locker-modal">
+  <div class="modal-box" style="max-width:380px;">
+    <button class="modal-close" onclick="closeEditLockerModal()">×</button>
+    <h3 style="margin-bottom:16px;">แก้ไขตู้ <span id="edit-locker-label"></span></h3>
+    <div class="field">
+      <label>ชื่อสถานที่ / คำอธิบาย</label>
+      <input type="text" id="edit-locker-location" placeholder="เช่น อาคาร A ชั้น 1">
+    </div>
+    <div id="edit-locker-error" class="form-error hidden">กรุณากรอกชื่อสถานที่</div>
+    <button class="btn-primary" style="margin-top:14px;" onclick="saveEditedLocker()">บันทึก</button>
+  </div>
+</div>
+
+
+<script src="common.js"></script>
+<script>
+let allLockersCache = [];
+let currentChatUserId = null;
+
+/* ---------------- navigation ---------------- */
+async function switchAdminView(btn) {
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll(".admin-view").forEach(v => v.style.display = "none");
+  document.getElementById(btn.dataset.target).style.display = "block";
+  const t = btn.dataset.target;
+  if (t === "a-overview") await loadAdminOverview();
+  if (t === "a-reports") await loadAdminReports();
+  if (t === "a-lockers") await loadAdminLockers();
+  if (t === "a-slips") await loadPendingSlips();
+  if (t === "a-users") await loadAdminUsers();
+  if (t === "a-chat") await loadChatConversations();
+  if (t === "a-settings") await loadAdminSettings();
+}
+
+/* ---------------- overview ---------------- */
+async function loadAdminOverview() {
+  const res = await apiGet("/admin/overview");
+  if (!res.ok) return;
+  document.getElementById("stat-total").textContent = res.stats.total;
+  document.getElementById("stat-available").textContent = res.stats.available;
+  document.getElementById("stat-occupied").textContent = res.stats.occupied;
+  document.getElementById("stat-alert").textContent = res.stats.door_alerts;
+  document.getElementById("recent-activity").innerHTML = res.activity.map(a => `
+    <tr><td>${a.actor}</td><td class="mono">${a.locker_id || '-'}</td><td>${a.action}</td><td>${timeAgo(a.created_at)}</td></tr>
+  `).join("") || `<tr><td colspan="4" style="text-align:center; color:var(--muted);">ยังไม่มีกิจกรรม</td></tr>`;
+}
+
+/* ---------------- lockers ---------------- */
+const stateMeta = {
+  available: { label: "ว่าง", badge: "mint", led: "on" },
+  occupied: { label: "ไม่ว่าง", badge: "red", led: "warn" }
+};
+let currentFilter = "all";
+function adminCard(l) {
+  const m = stateMeta[l.state];
+  return `
+  <div class="locker-card">
+    <div class="locker-top">
+      <div><div class="locker-id">${l.id}</div><div class="locker-loc">${l.location}</div></div>
+      <div class="led-indicator ${m.led}"></div>
+    </div>
+    <div class="locker-meta"><span>สถานะ</span> <span class="badge ${m.badge}"><span class="dot"></span> ${m.label}</span></div>
+    <div class="door-status ${!l.door_closed ? 'alert' : ''}">${l.door_closed ? '🚪 ประตูปิดสนิท (MC-38)' : '⚠ ตรวจพบการเปิดผิดปกติ'}</div>
+    <div class="locker-actions">
+      <button class="btn-sm ghost" onclick="forceUnlockLocker('${l.id}')">บังคับปลดล็อก</button>
+      <button class="btn-sm ghost" onclick="openEditLockerModal('${l.id}', '${l.location}')">แก้ไข</button>
+    </div>
+  </div>`;
+}
+async function loadAdminLockers() {
+  const res = await apiGet("/lockers/list");
+  if (!res.ok) return;
+  allLockersCache = res.lockers;
+  renderFilterTabs();
+  renderAdminLockers();
+}
+function renderAdminLockers() {
+  const filtered = currentFilter === "all" ? allLockersCache : allLockersCache.filter(l => l.state === currentFilter);
+  document.getElementById("admin-locker-grid").innerHTML =
+    filtered.map(adminCard).join("") || `<div class="empty-state">ไม่พบตู้ในหมวดนี้</div>`;
+}
+function renderFilterTabs() {
+  const tabs = [{ key: "all", label: "ทั้งหมด" }, { key: "available", label: "ว่าง" }, { key: "occupied", label: "ไม่ว่าง" }];
+  document.getElementById("admin-filter-tabs").innerHTML = tabs.map(t =>
+    `<button class="${t.key === currentFilter ? 'active' : ''}" onclick="setFilter('${t.key}')">${t.label}</button>`
+  ).join("");
+}
+function setFilter(key) { currentFilter = key; renderFilterTabs(); renderAdminLockers(); }
+
+/* ---------------- users ---------------- */
+async function loadAdminUsers() {
+  const res = await apiGet("/admin/users");
+  if (!res.ok) return;
+  document.getElementById("user-table-body").innerHTML = res.users.map(u => `
+    <tr>
+      <td>${u.first_name} ${u.last_name}</td>
+      <td class="mono">${u.phone}</td>
+      <td>${u.rental_count} ครั้ง</td>
+      <td>${u.active_count > 0 ? '<span class="badge mint"><span class="dot"></span> ใช้งานอยู่</span>' : '<span class="badge red"><span class="dot"></span> ไม่มีตู้ที่ใช้งาน</span>'}</td>
+    </tr>`).join("");
+}
+
+/* ---------------- revenue reports ---------------- */
+async function loadAdminReports() {
+  const res = await apiGet("/admin/reports");
+  if (!res.ok) return;
+
+  document.getElementById("stat-rev-today").textContent = res.today_total + " บาท";
+  document.getElementById("stat-rev-week").textContent = res.week_total + " บาท";
+  document.getElementById("stat-rev-count").textContent = res.rental_count;
+  document.getElementById("stat-rev-avg").textContent = res.average + " บาท";
+
+  const labels = [];
+  const data = [];
+  const byDate = {};
+  res.daily.forEach(d => byDate[d.d] = Number(d.total));
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    labels.push(i === 0 ? "วันนี้" : d.toLocaleDateString("th-TH", { day: "numeric", month: "short" }));
+    data.push(byDate[key] || 0);
+  }
+
+  renderCssBarChart("revenue-chart", labels, data);
+}
+
+// Pure CSS/HTML bar chart — no external library, so it works even on
+// networks that block CDNs (cdnjs, etc).
+function renderCssBarChart(containerId, labels, data) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const max = Math.max(...data, 1);
+  if (data.every(v => v === 0)) {
+    el.innerHTML = `<div class="css-bar-empty">ยังไม่มีรายได้ในช่วง 7 วันที่ผ่านมา</div>`;
+    return;
+  }
+  el.innerHTML = labels.map((label, i) => {
+    const heightPct = Math.max(4, Math.round((data[i] / max) * 100));
+    return `
+    <div class="css-bar-col">
+      <div class="css-bar-value">${data[i]}</div>
+      <div class="css-bar" style="height:${heightPct}%;"></div>
+      <div class="css-bar-label">${label}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------------- pending slips ---------------- */
+async function loadPendingSlips() {
+  const res = await apiGet("/payments/pending");
+  if (!res.ok) return;
+  const wrap = document.getElementById("pending-slip-list");
+  if (res.pending.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">ไม่มีรายการรอตรวจสอบในขณะนี้</div>`;
+    updateSlipBadge(0);
+    return;
+  }
+  wrap.innerHTML = res.pending.map(p => {
+    const slipUrl = p.slip_url;
+    const kindLabel = p.kind === 'extend' ? 'ต่อเวลา' : (p.kind === 'penalty' ? 'ค่าปรับเกินเวลา' : 'เช่าใหม่');
+    const kindBadge = p.kind === 'extend' ? 'amber' : (p.kind === 'penalty' ? 'red' : 'mint');
+    const durationText = p.kind === 'penalty' ? 'ค่าปรับเกินเวลา' : (DURATION_LABELS[p.duration_minutes] || p.duration_minutes + ' นาที');
+    return `
+    <div class="pending-card">
+      <img class="pending-thumb" src="${slipUrl}" onclick="openLightbox('${slipUrl}')">
+      <div class="pending-info">
+        <div class="pi-locker">${p.locker_id} <span class="mono" style="font-size:11px; color:var(--muted);">#${p.ref_code}</span>
+          <span class="badge ${kindBadge}" style="margin-left:6px;">${kindLabel}</span>
+        </div>
+        <div class="pi-meta">ลูกค้า: ${p.first_name} ${p.last_name} · ${durationText} · ยอดชำระ <b style="color:var(--plum);">${p.amount} บาท</b></div>
+        <div class="pi-meta">ส่งเมื่อ ${timeAgo(p.created_at)}</div>
+      </div>
+      <div class="pending-actions">
+        <button class="btn-sm unlock" onclick="confirmSlip(${p.id})">ยืนยัน &amp; ปลดล็อก</button>
+        <button class="btn-sm reject" onclick="openRejectModal(${p.id})">ปฏิเสธสลิป</button>
+      </div>
+    </div>`;
+  }).join("");
+  updateSlipBadge(res.pending.length);
+}
+function updateSlipBadge(count) {
+  const badge = document.getElementById("slip-badge");
+  if (!badge) return;
+  badge.textContent = count;
+  badge.classList.toggle("hidden", count === 0);
+}
+async function confirmSlip(paymentId) {
+  const res = await apiPost("/payments/confirm", { payment_id: paymentId });
+  if (!res.ok) { alert(res.error); return; }
+  alert(res.message);
+  await loadPendingSlips();
+  await loadAdminOverview();
+  await loadAdminLockers();
+  await loadAdminReports();
+}
+let rejectModalPaymentId = null;
+function openRejectModal(paymentId) {
+  rejectModalPaymentId = paymentId;
+  document.getElementById("reject-modal-label").textContent = "";
+  document.getElementById("reject-reason").value = "";
+  document.getElementById("reject-error").classList.add("hidden");
+  document.getElementById("reject-modal").classList.remove("hidden");
+}
+function closeRejectModal() { document.getElementById("reject-modal").classList.add("hidden"); }
+async function submitReject() {
+  const reason = document.getElementById("reject-reason").value.trim();
+  if (!reason) { document.getElementById("reject-error").classList.remove("hidden"); return; }
+  const res = await apiPost("/payments/reject", { payment_id: rejectModalPaymentId, reason });
+  if (!res.ok) { alert(res.error); return; }
+  closeRejectModal();
+  await loadPendingSlips();
+  await loadAdminOverview();
+  await loadAdminLockers();
+  alert("ปฏิเสธสลิปแล้ว ระบบแจ้งเหตุผลไปยังลูกค้าเรียบร้อย");
+}
+function openLightbox(src) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("slip-lightbox").classList.remove("hidden");
+}
+function closeLightbox() { document.getElementById("slip-lightbox").classList.add("hidden"); }
+
+/* ---------------- emergency unlock ---------------- */
+async function openEmergencyModal() {
+  const res = await apiGet("/lockers/list");
+  allLockersCache = res.ok ? res.lockers : [];
+  renderEmergencyLockerList();
+  document.getElementById("emergency-reason").value = "";
+  document.getElementById("emergency-error").classList.add("hidden");
+  document.getElementById("emergency-modal").classList.remove("hidden");
+}
+function closeEmergencyModal() { document.getElementById("emergency-modal").classList.add("hidden"); }
+function renderEmergencyLockerList() {
+  document.getElementById("emergency-locker-list").innerHTML = allLockersCache.map(l => `
+    <label class="pick-card" style="cursor:pointer;">
+      <div><div class="t1">${l.id}</div><div class="t2">${l.location}${l.state === 'occupied' ? ' · ไม่ว่าง' : ' · ว่าง'}</div></div>
+      <input type="checkbox" class="emergency-check" value="${l.id}" style="width:20px; height:20px; accent-color:var(--red);">
+    </label>`).join("");
+}
+async function submitEmergencyUnlock() {
+  const checked = Array.from(document.querySelectorAll(".emergency-check:checked")).map(c => c.value);
+  const reason = document.getElementById("emergency-reason").value.trim();
+  const err = document.getElementById("emergency-error");
+  if (checked.length === 0 || !reason) { err.classList.remove("hidden"); return; }
+  err.classList.add("hidden");
+  const res = await apiPost("/admin/emergency_unlock", { locker_ids: checked, reason });
+  if (!res.ok) { alert(res.error); return; }
+  closeEmergencyModal();
+  await loadAdminOverview();
+  alert(`สั่งปลดล็อกฉุกเฉินตู้ ${checked.join(", ")} เรียบร้อย (บันทึกเหตุผลไว้ในระบบแล้ว)`);
+}
+
+/* ---------------- chat ---------------- */
+async function loadChatConversations() {
+  const res = await apiGet("/chat/conversations");
+  if (!res.ok) return;
+  const select = document.getElementById("chat-conversation-select");
+  const totalUnread = res.conversations.reduce((s, c) => s + Number(c.unread_count), 0);
+  updateChatBadge(totalUnread);
+  select.innerHTML = `<option value="">— เลือกบทสนทนา —</option>` + res.conversations.map(c => `
+    <option value="${c.user_id}">${c.first_name} ${c.last_name}${c.unread_count > 0 ? ` (${c.unread_count} ข้อความใหม่)` : ""}</option>
+  `).join("");
+}
+async function selectChatConversation() {
+  const select = document.getElementById("chat-conversation-select");
+  currentChatUserId = select.value || null;
+  if (!currentChatUserId) { document.getElementById("chat-messages-admin").innerHTML = ""; return; }
+  const res = await apiGet("/chat/admin_messages?user_id=" + currentChatUserId);
+  if (!res.ok) return;
+  renderChatMessages("chat-messages-admin", "admin", res.messages);
+  await loadChatConversations(); // refresh unread badge now that this thread is marked read
+}
+function updateChatBadge(count) {
+  const badge = document.getElementById("chat-badge");
+  if (!badge) return;
+  badge.textContent = count;
+  badge.classList.toggle("hidden", count === 0);
+}
+
+/* ---------------- system settings ---------------- */
+async function loadAdminSettings() {
+  const res = await apiGet("/admin/get_settings");
+  if (!res.ok) return;
+  document.getElementById("settings-location").value = res.settings.location_name;
+  document.getElementById("settings-unlock-hold").value = res.settings.unlock_hold_seconds;
+  document.getElementById("settings-notify-hours").value = res.settings.notify_hours_before;
+}
+async function saveSettings() {
+  const errEl = document.getElementById("settings-error");
+  errEl.classList.add("hidden");
+  const res = await apiPost("/admin/update_settings", {
+    location_name: document.getElementById("settings-location").value.trim(),
+    unlock_hold_seconds: document.getElementById("settings-unlock-hold").value.trim(),
+    notify_hours_before: document.getElementById("settings-notify-hours").value.trim()
+  });
+  if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
+  alert("บันทึกการตั้งค่าเรียบร้อยแล้ว");
+}
+
+/* ---------------- force unlock (single locker, from ตู้ทั้งหมด) ---------------- */
+async function forceUnlockLocker(lockerId) {
+  if (!confirm(`ยืนยันบังคับปลดล็อกตู้ ${lockerId}?`)) return;
+  const res = await apiPost("/admin/emergency_unlock", {
+    locker_ids: [lockerId],
+    reason: "บังคับปลดล็อกจากหน้าจัดการตู้"
+  });
+  if (!res.ok) { alert(res.error); return; }
+  alert(`สั่งปลดล็อกตู้ ${lockerId} เรียบร้อย`);
+  await loadAdminOverview();
+}
+
+/* ---------------- edit locker ---------------- */
+let editLockerTargetId = null;
+function openEditLockerModal(lockerId, currentLocation) {
+  editLockerTargetId = lockerId;
+  document.getElementById("edit-locker-label").textContent = lockerId;
+  document.getElementById("edit-locker-location").value = currentLocation;
+  document.getElementById("edit-locker-error").classList.add("hidden");
+  document.getElementById("edit-locker-modal").classList.remove("hidden");
+}
+function closeEditLockerModal() { document.getElementById("edit-locker-modal").classList.add("hidden"); }
+async function saveEditedLocker() {
+  const location = document.getElementById("edit-locker-location").value.trim();
+  const errEl = document.getElementById("edit-locker-error");
+  if (!location) { errEl.classList.remove("hidden"); return; }
+  const res = await apiPost("/admin/update_locker", { locker_id: editLockerTargetId, location });
+  if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
+  closeEditLockerModal();
+  await loadAdminLockers();
+}
+
+/* ---------------- init ---------------- */
+requireAuthAndLoadProfile("admin", (admin) => {
+  document.getElementById("admin-name-display").textContent = admin.name;
+  loadAdminOverview();
+});
+setInterval(() => {
+  if (document.getElementById("a-slips").style.display !== "none") loadPendingSlips();
+  if (document.getElementById("a-overview").style.display !== "none") loadAdminOverview();
+  if (document.getElementById("a-chat").style.display !== "none" && currentChatUserId) selectChatConversation();
+  else if (document.getElementById("a-chat").style.display !== "none") loadChatConversations();
+}, 5000);
+</script>
+</body>
+</html>

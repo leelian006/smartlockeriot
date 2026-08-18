@@ -1,24 +1,36 @@
 /* =================================================================
    PetalLock — shared utilities, loaded by every page (index.html,
-   register.php, user-dashboard.php, admin-dashboard.php).
+   register.html, user-dashboard.html, admin-dashboard.html).
    ================================================================= */
 
-const API_BASE = "/smart-locker-backend/api";
+const API_BASE = "/api";
 const DURATION_LABELS = { 10: "10 นาที", 30: "30 นาที", 60: "60 นาที" };
 const PRICE_BY_MINUTES = { 10: 10, 30: 20, 60: 30 };
 
 /* ---------------- fetch helper ---------------- */
 async function api(path, opts = {}) {
   const isForm = opts.body instanceof FormData;
+  const token = localStorage.getItem("token");
   try {
     const res = await fetch(API_BASE + path, {
-      credentials: "include",
-      headers: isForm ? {} : { "Content-Type": "application/json" },
+      headers: {
+        ...(isForm ? {} : { "Content-Type": "application/json" }),
+        ...(token ? { "Authorization": "Bearer " + token } : {}),
+      },
       ...opts
     });
-    return await res.json();
+    const data = await res.json();
+    // A 401 on an authenticated call means the token expired/is invalid —
+    // clear it and bounce to login. Login/admin_login themselves also
+    // return 401 for plain wrong credentials, which is a normal inline
+    // error, not an expired session, so they're excluded here.
+    if (res.status === 401 && path !== "/auth/login" && path !== "/auth/admin_login") {
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+    return data;
   } catch (e) {
-    return { ok: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ตรวจสอบว่า XAMPP เปิดอยู่หรือไม่" };
+    return { ok: false, error: "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ" };
   }
 }
 function apiGet(path) { return api(path); }
@@ -51,6 +63,23 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+/* ---------------- auth guard (shared by the two dashboard pages) ---------------- */
+// Old PHP dashboards got the logged-in user/admin's profile via a
+// session-bound query at render time. Static pages have no render step, so
+// this runs on load instead: bounce to login if there's no token, otherwise
+// fetch the profile via /auth/me and hand it to the page's own render fn.
+async function requireAuthAndLoadProfile(expectedRole, onProfile) {
+  const token = localStorage.getItem("token");
+  if (!token) { window.location.href = "index.html"; return; }
+  const res = await apiGet("/auth/me");
+  if (!res.ok || (expectedRole === "admin" ? !res.admin : !res.user)) {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+    return;
+  }
+  onProfile(expectedRole === "admin" ? res.admin : res.user);
+}
+
 /* ---------------- chat (shared by user + admin pages) ---------------- */
 function renderChatMessages(containerId, viewerRole, messages) {
   const el = document.getElementById(containerId);
@@ -74,8 +103,8 @@ async function sendChatMessage(role) {
   if (!message) return;
   if (role === "admin" && !currentChatUserId) { alert("กรุณาเลือกบทสนทนาก่อน"); return; }
   const res = role === "admin"
-    ? await apiPost("/chat/admin_send.php", { message, user_id: currentChatUserId })
-    : await apiPost("/chat/send.php", { message });
+    ? await apiPost("/chat/admin_send", { message, user_id: currentChatUserId })
+    : await apiPost("/chat/send", { message });
   if (!res.ok) { alert(res.error); return; }
   input.value = "";
   if (role === "user") await loadUserChat();
@@ -88,6 +117,7 @@ function closeTermsModal() { document.getElementById("terms-modal").classList.ad
 
 /* ---------------- logout (shared by user + admin pages) ---------------- */
 async function doLogout() {
-  await apiPost("/auth/logout.php", {});
+  await apiPost("/auth/logout", {});
+  localStorage.removeItem("token");
   window.location.href = "index.html";
 }
