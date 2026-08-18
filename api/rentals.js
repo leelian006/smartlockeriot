@@ -1,5 +1,7 @@
 // See api/esp32.js and vercel.json for why this is one file with an
 // ?action= dispatch instead of one file per endpoint.
+const { dispatch } = require("./_lib/router");
+
 const routes = {
   create: require("./_rentals/create"),
   history: require("./_rentals/history"),
@@ -13,8 +15,4 @@ const routes = {
   verify_and_unlock: require("./_rentals/verify_and_unlock"),
 };
 
-module.exports = async (req, res) => {
-  const handler = routes[req.query.action];
-  if (!handler) return res.status(404).json({ ok: false, error: "not found" });
-  return handler(req, res);
-};
+module.exports = (req, res) => dispatch(routes, req, res);

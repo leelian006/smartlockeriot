@@ -4,6 +4,8 @@
 // (bracket dynamic routes ([...slug].js] didn't get picked up on this
 // project's "Other" framework config, so this uses plain rewrites instead,
 // which are guaranteed to work regardless of framework detection).
+const { dispatch } = require("./_lib/router");
+
 const routes = {
   poll: require("./_esp32/poll"),
   verify_pin: require("./_esp32/verify_pin"),
@@ -11,8 +13,4 @@ const routes = {
   check_locker: require("./_esp32/check_locker"),
 };
 
-module.exports = async (req, res) => {
-  const handler = routes[req.query.action];
-  if (!handler) return res.status(404).json({ ok: false, error: "not found" });
-  return handler(req, res);
-};
+module.exports = (req, res) => dispatch(routes, req, res);
