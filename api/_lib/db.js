@@ -15,14 +15,29 @@ function resolveConnectionString() {
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
     process.env.POSTGRES_URL_NON_POOLING;
-  if (direct) return direct;
+  const raw = direct
+    ? direct
+    : (() => {
+        const { POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DATABASE } = process.env;
+        if (!(POSTGRES_USER && POSTGRES_PASSWORD && POSTGRES_HOST)) return undefined;
+        const db = POSTGRES_DATABASE || "postgres";
+        return `postgres://${POSTGRES_USER}:${encodeURIComponent(POSTGRES_PASSWORD)}@${POSTGRES_HOST}:5432/${db}`;
+      })();
+  if (!raw) return undefined;
 
-  const { POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DATABASE } = process.env;
-  if (POSTGRES_USER && POSTGRES_PASSWORD && POSTGRES_HOST) {
-    const db = POSTGRES_DATABASE || "postgres";
-    return `postgres://${POSTGRES_USER}:${encodeURIComponent(POSTGRES_PASSWORD)}@${POSTGRES_HOST}:5432/${db}`;
+  // Supabase/Vercel-supplied strings often carry ?sslmode=require (or
+  // verify-full), which pg-connection-string parses into its own ssl
+  // config and applies *instead of* the explicit `ssl` option below —
+  // that's what was causing "self-signed certificate in certificate
+  // chain" even with rejectUnauthorized:false set. Stripping it here lets
+  // our own ssl option be the only thing in effect.
+  try {
+    const url = new URL(raw);
+    url.searchParams.delete("sslmode");
+    return url.toString();
+  } catch (err) {
+    return raw;
   }
-  return undefined;
 }
 
 const { Pool } = require("pg");
