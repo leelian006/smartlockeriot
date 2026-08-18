@@ -1,8 +1,12 @@
 const { createClient } = require("@supabase/supabase-js");
 
+// Vercel's Supabase integration names the server-side secret key
+// differently depending on integration version (older: SERVICE_ROLE_KEY,
+// newer: SECRET_KEY, matching Supabase's renamed API key system) — accept
+// either rather than requiring one exact name.
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
 );
 
 const BUCKET = "slips";
