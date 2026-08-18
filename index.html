@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetalLock — เข้าสู่ระบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="screen-login" data-mode="user">
+  <div class="login-visual">
+    <div class="brand"><span class="brand-dot"></span> PetalLock</div>
+    <div class="locker-hero">
+      <div class="locker-door">
+        <div class="locker-led"></div>
+        <div class="locker-handle"></div>
+      </div>
+      <div class="hero-caption">
+        <h1>ตู้ล็อกเกอร์อัจฉริยะ</h1>
+        <p>ปลดล็อกด้วยแอปเดียว จัดการตู้เช่าของคุณได้ทุกที่ ทุกเวลา</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-card">
+      <div class="tab-switch">
+        <button class="active" onclick="setLoginMode('user')" id="tab-user">ผู้ใช้ทั่วไป</button>
+        <button onclick="setLoginMode('admin')" id="tab-admin">ผู้ดูแลระบบ</button>
+      </div>
+
+      <h2 id="login-title">ยินดีต้อนรับกลับมา</h2>
+      <p class="login-sub" id="login-sub">เข้าสู่ระบบเพื่อจัดการตู้ล็อกเกอร์ของคุณ</p>
+
+      <div class="field">
+        <label id="label-username">เบอร์โทรศัพท์ / อีเมล</label>
+        <input type="text" placeholder="กรอกเบอร์โทรศัพท์หรืออีเมล" id="input-username">
+      </div>
+      <div class="field">
+        <label>รหัสผ่าน</label>
+        <input type="password" placeholder="กรอกรหัสผ่าน" id="input-password">
+      </div>
+      <div id="login-error" class="form-error hidden">เบอร์โทร/อีเมล หรือรหัสผ่านไม่ถูกต้อง</div>
+
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+
+      <div class="admin-note">โหมดผู้ดูแลระบบ — สำหรับพนักงานที่ได้รับสิทธิ์เท่านั้น</div>
+
+      <p class="login-foot" id="login-foot">ยังไม่มีบัญชี? <a href="register.php" style="color: var(--pink-deep); font-weight:600; text-decoration:underline; cursor:pointer;">สมัครสมาชิก</a></p>
+    </div>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+function setLoginMode(mode) {
+  const loginScreen = document.getElementById("screen-login");
+  loginScreen.dataset.mode = mode;
+  document.getElementById("tab-user").classList.toggle("active", mode === "user");
+  document.getElementById("tab-admin").classList.toggle("active", mode === "admin");
+  document.getElementById("login-error").classList.add("hidden");
+  if (mode === "admin") {
+    document.getElementById("login-title").textContent = "เข้าสู่ระบบผู้ดูแล";
+    document.getElementById("login-sub").textContent = "สำหรับพนักงานจัดการตู้ล็อกเกอร์เท่านั้น";
+    document.getElementById("label-username").textContent = "รหัสพนักงาน / อีเมล";
+    document.getElementById("login-btn").textContent = "เข้าสู่ระบบผู้ดูแล";
+    document.getElementById("login-foot").style.display = "none";
+  } else {
+    document.getElementById("login-title").textContent = "ยินดีต้อนรับกลับมา";
+    document.getElementById("login-sub").textContent = "เข้าสู่ระบบเพื่อจัดการตู้ล็อกเกอร์ของคุณ";
+    document.getElementById("label-username").textContent = "เบอร์โทรศัพท์ / อีเมล";
+    document.getElementById("login-btn").textContent = "เข้าสู่ระบบ";
+    document.getElementById("login-foot").style.display = "block";
+  }
+}
+async function doLogin() {
+  const mode = document.getElementById("screen-login").dataset.mode;
+  const identifier = document.getElementById("input-username").value.trim();
+  const password = document.getElementById("input-password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.classList.add("hidden");
+
+  if (mode === "admin") {
+    const res = await apiPost("/auth/admin_login.php", { username: identifier, password });
+    if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
+    window.location.href = "admin-dashboard.php";
+  } else {
+    const res = await apiPost("/auth/login.php", { identifier, password });
+    if (!res.ok) { errEl.textContent = res.error; errEl.classList.remove("hidden"); return; }
+    window.location.href = "user-dashboard.php";
+  }
+}
+</script>
+</body>
+</html>
