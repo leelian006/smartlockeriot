@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "PetalLock smart locker backend — Vercel serverless functions + Supabase Postgres/Storage",
   "dependencies": {
+    "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.0",
     "bcryptjs": "^2.4.3",
     "formidable": "^2.1.2",
