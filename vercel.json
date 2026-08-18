@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/api/auth/:action", "destination": "/api/auth?action=:action" },
+    { "source": "/api/admin/:action", "destination": "/api/admin?action=:action" },
+    { "source": "/api/chat/:action", "destination": "/api/chat?action=:action" },
+    { "source": "/api/payments/:action", "destination": "/api/payments?action=:action" },
+    { "source": "/api/rentals/:action", "destination": "/api/rentals?action=:action" },
+    { "source": "/api/lockers/:action", "destination": "/api/lockers?action=:action" },
+    { "source": "/api/esp32/:action", "destination": "/api/esp32?action=:action" }
+  ]
+}
